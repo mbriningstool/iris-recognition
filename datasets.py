@@ -42,3 +42,4 @@ if __name__ == '__main__':
     image = cv2.imread(data[0])
     cv2.imshow('test', image)
     cv2.waitKey(0)
+
