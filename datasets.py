@@ -1,3 +1,9 @@
+#################################################################
+#iris-recognition original code base was created by
+#github user mokosaur https://github.com/mokosaur/iris-recognition
+#code was forked from original on 4-4-2019 
+################################################################
+
 import os
 import numpy as np
 
