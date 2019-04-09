@@ -19,36 +19,36 @@ def polar2cart(radius, xCoordinate, yCoordinate, polarAngle):
     :return: Cartesian coordinates
     :rtype: tuple (int, int)
     """
-    x = int(xCoordinate + radius * math.cos(polarAngle))
-    y = int(yCoordinate + radius * math.sin(polarAngle))
-    return x, y
+    xCartesian = int(xCoordinate + radius * math.cos(polarAngle))
+    yCartesian = int(yCoordinate + radius * math.sin(polarAngle))
+    return xCartesian, yCartesian
 
 
-def unravel_iris(img, xp, yp, rp, xi, yi, ri, phase_width=300, iris_width=150):
+def unravel_iris(eyeImage, xPupilCenter, yPupilCenter, pupilRadius, xIrisCenter, yIrisCenter, irisRadius, phase_width=300, iris_width=150):
     """Unravels the iris from the image and transforms it to a straightened representation.
-    :param img: Image of an eye
-    :param xp: x coordinate of the pupil centre
-    :param yp: y coordinate of the pupil centre
-    :param rp: Radius of the pupil
-    :param xi: x coordinate of the iris centre
-    :param yi: y coordinate of the iris centre
-    :param ri: Radius of the iris
+    :param eyeImage: Image of an eye
+    :param xPupilCenter: x coordinate of the pupil centre
+    :param yPupilCenter: y coordinate of the pupil centre
+    :param pupilRadius: Radius of the pupil
+    :param xIrisCenter: x coordinate of the iris centre
+    :param yIrisCenter: y coordinate of the iris centre
+    :param irisRadius: Radius of the iris
     :param phase_width: Length of the transformed iris
     :param iris_width: Width of the transformed iris
     :return: Straightened image of the iris
     :rtype: ndarray
     """
-    if img.ndim > 2:
-        img = img[:, :, 0].copy()
+    if eyeImage.ndim > 2:
+        eyeImage = eyeImage[:, :, 0].copy()
     iris = np.zeros((iris_width, phase_width))
     theta = np.linspace(0, 2 * np.pi, phase_width)
     for i in range(phase_width):
-        begin = polar2cart(rp, xp, yp, theta[i])
-        end = polar2cart(ri, xi, yi, theta[i])
+        begin = polar2cart(pupilRadius, xPupilCenter, yPupilCenter, theta[i])
+        end = polar2cart(irisRadius, xIrisCenter, yIrisCenter, theta[i])
         xspace = np.linspace(begin[0], end[0], iris_width)
         yspace = np.linspace(begin[1], end[1], iris_width)
-        iris[:, i] = [255 - img[int(y), int(x)]
-                      if 0 <= int(x) < img.shape[1] and 0 <= int(y) < img.shape[0]
+        iris[:, i] = [255 - eyeImage[int(y), int(x)]
+                      if 0 <= int(x) < eyeImage.shape[1] and 0 <= int(y) < eyeImage.shape[0]
                       else 0
                       for x, y in zip(xspace, yspace)]
     return iris
@@ -69,26 +69,26 @@ def gabor(rho, phi, w, theta0, r0, alpha, beta):
            np.exp(-(phi - theta0) ** 2 / beta ** 2)
 
 
-def gabor_convolve(img, w, alpha, beta):
+def gabor_convolve(irisImage, w, alpha, beta):
     """Uses gabor wavelets to extract iris features.
-    :param img: Image of an iris
+    :param irisImage: Image of an iris
     :param w: w parameter of Gabor wavelets
     :param alpha: alpha parameter of Gabor wavelets
     :param beta: beta parameter of Gabor wavelets
     :return: Transformed image of the iris (real and imaginary)
     :rtype: tuple (ndarray, ndarray)
     """
-    rho = np.array([np.linspace(0, 1, img.shape[0]) for i in range(img.shape[1])]).T
-    x = np.linspace(0, 1, img.shape[0])
-    y = np.linspace(-np.pi, np.pi, img.shape[1])
+    rho = np.array([np.linspace(0, 1, irisImage.shape[0]) for i in range(irisImage.shape[1])]).T
+    x = np.linspace(0, 1, irisImage.shape[0])
+    y = np.linspace(-np.pi, np.pi, irisImage.shape[1])
     xx, yy = np.meshgrid(x, y)
-    return rho * img * np.real(gabor(xx, yy, w, 0, 0.5, alpha, beta).T), \
-           rho * img * np.imag(gabor(xx, yy, w, 0, 0.5, alpha, beta).T)
+    return rho * irisImage * np.real(gabor(xx, yy, w, 0, 0.5, alpha, beta).T), \
+           rho * irisImage * np.imag(gabor(xx, yy, w, 0, 0.5, alpha, beta).T)
 
 
-def iris_encode(img, dr=15, dtheta=15, alpha=0.4):
+def iris_encode(irisImage, dr=15, dtheta=15, alpha=0.4):
     """Encodes the straightened representation of an iris with gabor wavelets.
-    :param img: Image of an iris
+    :param irisImage: Image of an iris
     :param dr: Width of image patches producing one feature
     :param dtheta: Length of image patches producing one feature
     :param alpha: Gabor wavelets modifier (beta parameter of Gabor wavelets becomes inverse of this number)
@@ -97,8 +97,8 @@ def iris_encode(img, dr=15, dtheta=15, alpha=0.4):
     """
     # mean = np.mean(img)
     # std = img.std()
-    mask = view_as_blocks(np.logical_and(100 < img, img < 230), (dr, dtheta))
-    norm_iris = (img - img.mean()) / img.std()
+    mask = view_as_blocks(np.logical_and(100 < irisImage, irisImage < 230), (dr, dtheta))
+    norm_iris = (irisImage - irisImage.mean()) / irisImage.std()
     patches = view_as_blocks(norm_iris, (dr, dtheta))
     code = np.zeros((patches.shape[0] * 3, patches.shape[1] * 2))
     code_mask = np.zeros((patches.shape[0] * 3, patches.shape[1] * 2))
@@ -133,4 +133,4 @@ if __name__ == '__main__':
     #plt.subplot(224)
 
     #plt.imshow(mask, cmap=plt.cm.gray, interpolation='none')
-#plt.show()
+    #plt.show()
